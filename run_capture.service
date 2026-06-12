@@ -1,0 +1,14 @@
+[Unit]
+Description=USB H264 camera capture to HLS
+After=network.target
+
+[Service]
+Type=simple
+User=orangepi
+WorkingDirectory=/home/orangepi
+ExecStart=/home/orangepi/run_capture.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

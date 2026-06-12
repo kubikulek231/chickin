@@ -1,0 +1,16 @@
+[Unit]
+Description=NGINX webserver for HLS and webroot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/orangepi
+ExecStart=/home/orangepi/run_webserver.sh
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

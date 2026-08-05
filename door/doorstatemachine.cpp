@@ -61,6 +61,7 @@ DoorStateMachine::DoorStateMachine(Button &button,
 void DoorStateMachine::init()
 {
     determineInitialState_();
+    forceGoTopUntilTop_ = (state_ != State::TOP && state_ != State::ERROR);
     ledBlinkStartTime_ = get_absolute_time();
     ledBlinkOn_ = false;
     printf("Initial door state: %s\n", stateName());
@@ -287,38 +288,48 @@ void DoorStateMachine::update()
 
     if (button_.pressed())
     {
-        switch (state_)
+        if (forceGoTopUntilTop_ && state_ != State::TOP)
         {
-        case State::TOP:
-            startMoveToBottom_();
-            break;
-
-        case State::BOTTOM:
-            startMoveToTop_();
-            break;
-
-        case State::MIDDLE:
-            if (lastFullState_ == LastFullState::TOP)
-            {
-                startMoveToBottom_();
-            }
-            else if (lastFullState_ == LastFullState::BOTTOM)
+            if (state_ != State::MOVING_TO_TOP)
             {
                 startMoveToTop_();
             }
-            else
+        }
+        else
+        {
+            switch (state_)
             {
-                printf("MIDDLE state but no last full state known\n");
+            case State::TOP:
+                startMoveToBottom_();
+                break;
+
+            case State::BOTTOM:
+                startMoveToTop_();
+                break;
+
+            case State::MIDDLE:
+                if (lastFullState_ == LastFullState::TOP)
+                {
+                    startMoveToBottom_();
+                }
+                else if (lastFullState_ == LastFullState::BOTTOM)
+                {
+                    startMoveToTop_();
+                }
+                else
+                {
+                    printf("MIDDLE state but no last full state known\n");
+                }
+                break;
+
+            case State::UNKNOWN:
+                printf("UNKNOWN state: homing to TOP\n");
+                startMoveToTop_();
+                break;
+
+            default:
+                break;
             }
-            break;
-
-        case State::UNKNOWN:
-            printf("UNKNOWN state: homing to TOP\n");
-            startMoveToTop_();
-            break;
-
-        default:
-            break;
         }
     }
 
@@ -330,6 +341,7 @@ void DoorStateMachine::update()
             motor_.stop();
             state_ = State::TOP;
             lastFullState_ = LastFullState::TOP;
+            forceGoTopUntilTop_ = false;
             printf("Reached TOP\n");
         }
         else if (motionTimedOut_())

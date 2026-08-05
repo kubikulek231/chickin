@@ -4,8 +4,9 @@
 
 class Motor {
 public:
-    static constexpr uint16_t DEFAULT_DUTY = 65535;
+    static constexpr uint16_t MOVEMENT_DUTY = 65535;
     static constexpr uint16_t PWM_WRAP = 65535; // 16 bit resolution, max duty cycle is 65535
+    static constexpr float PWM_CLKDIV = 1.0f; // PWM clock divider; lower values increase frequency, higher decrease it
 
     Motor(uint dir1_pin, uint dir2_pin, bool invert_direction = false);
 

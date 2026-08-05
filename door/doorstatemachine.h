@@ -66,6 +66,7 @@ private:
     absolute_time_t motionStartTime_;
     absolute_time_t ledBlinkStartTime_;
     bool ledBlinkOn_;
+    bool forceGoTopUntilTop_ = false;
 
     void determineInitialState_();
     void startMoveToTop_();

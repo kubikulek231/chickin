@@ -23,6 +23,9 @@ void Motor::init() {
     pwm_set_wrap(dir1_pwm_slice_, PWM_WRAP);
     pwm_set_wrap(dir2_pwm_slice_, PWM_WRAP);
 
+    pwm_set_clkdiv(dir1_pwm_slice_, PWM_CLKDIV);
+    pwm_set_clkdiv(dir2_pwm_slice_, PWM_CLKDIV);
+
     pwm_set_chan_level(dir1_pwm_slice_, dir1_pwm_chan_, 0);
     pwm_set_chan_level(dir2_pwm_slice_, dir2_pwm_chan_, 0);
 
@@ -42,17 +45,17 @@ void Motor::driveReverse_(uint16_t duty) {
 
 void Motor::open() {
     if (invert_direction_) {
-        driveReverse_(DEFAULT_DUTY);
+        driveReverse_(MOVEMENT_DUTY);
     } else {
-        driveForward_(DEFAULT_DUTY);
+        driveForward_(MOVEMENT_DUTY);
     }
 }
 
 void Motor::close() {
     if (invert_direction_) {
-        driveForward_(DEFAULT_DUTY);
+        driveForward_(MOVEMENT_DUTY);
     } else {
-        driveReverse_(DEFAULT_DUTY);
+        driveReverse_(MOVEMENT_DUTY);
     }
 }
 

@@ -14,16 +14,16 @@
 #include "pico/stdlib.h"
 
 // === Endstops ===
-#define ENDSTOP_TOP_GPIO       26
+#define ENDSTOP_TOP_GPIO       14
 #define ENDSTOP_MIDDLE_GPIO    15
-#define ENDSTOP_BOTTOM_GPIO    14
+#define ENDSTOP_BOTTOM_GPIO    26
 
 // === Button ===
 #define DOOR_BUTTON_GPIO       6
 
 // === Motor ===
-#define MOTOR_DIR1_GPIO        8
-#define MOTOR_DIR2_GPIO        9
+#define MOTOR_DIR1_GPIO        7
+#define MOTOR_DIR2_GPIO        8
 
 // UART defines
 #define UART_ID uart0
@@ -54,35 +54,35 @@ int main()
         printf("USB serial not connected after 5s, continuing anyway.\n");
     }
 
-    // uart_init(UART_ID, BAUD_RATE);
-    // gpio_set_function(UART0_TX_GPIO, GPIO_FUNC_UART);
-    // gpio_set_function(UART0_RX_GPIO, GPIO_FUNC_UART);
+    uart_init(UART_ID, BAUD_RATE);
+    gpio_set_function(UART0_TX_GPIO, GPIO_FUNC_UART);
+    gpio_set_function(UART0_RX_GPIO, GPIO_FUNC_UART);
 
-    // Button openButton(DOOR_BUTTON_GPIO);
-    // openButton.init();
+    Button openButton(DOOR_BUTTON_GPIO);
+    openButton.init();
 
     Motor doorMotor(MOTOR_DIR1_GPIO, MOTOR_DIR2_GPIO);
     doorMotor.init();
 
-    // Endstop topEndstop(ENDSTOP_TOP_GPIO, true);
-    // topEndstop.init();
+    Endstop topEndstop(ENDSTOP_TOP_GPIO, true);
+    topEndstop.init();
 
-    // Endstop middleEndstop(ENDSTOP_MIDDLE_GPIO, true);
-    // middleEndstop.init();
+    Endstop middleEndstop(ENDSTOP_MIDDLE_GPIO, true);
+    middleEndstop.init();
 
-    // Endstop bottomEndstop(ENDSTOP_BOTTOM_GPIO, true);
-    // bottomEndstop.init();
+    Endstop bottomEndstop(ENDSTOP_BOTTOM_GPIO, true);
+    bottomEndstop.init();
 
-    // DoorStateMachine door(openButton, doorMotor, topEndstop, middleEndstop, bottomEndstop, 30000);
-    // door.init();
+    DoorStateMachine door(openButton, doorMotor, topEndstop, middleEndstop, bottomEndstop, 30000);
+    door.init();
 
     StatusLed::init(WS2812_PIO, WS2812_SM, WS2812_PIN, WS2812_IS_RGBW);
 
     printf("Entering the main loop...\n");
 
     while (true) {
-        // door.update();
-        doorMotor.open();
+        door.update();
+        // doorMotor.open();
         sleep_ms(5);
     }
 }

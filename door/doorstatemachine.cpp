@@ -43,15 +43,19 @@ DoorStateMachine::DoorStateMachine(Button &button,
                                    Endstop &topEndstop,
                                    Endstop &middleEndstop,
                                    Endstop &bottomEndstop,
-                                   uint32_t motorTimeoutMs)
+                                   uint32_t motorTimeoutMs,
+                                   uint32_t motorTimeoutTopToBottomMs,
+                                   uint32_t motorTimeoutMidToBottomMs)
     : button_(button),
       motor_(motor),
       topEndstop_(topEndstop),
       middleEndstop_(middleEndstop),
       bottomEndstop_(bottomEndstop),
       state_(State::UNKNOWN),
-      lastFullState_(LastFullState::NONE),
       motorTimeoutMs_(motorTimeoutMs),
+      motorTimeoutTopToBottomMs_(motorTimeoutTopToBottomMs),
+      motorTimeoutMidToBottomMs_(motorTimeoutMidToBottomMs),
+      currentMotionTimeoutMs_(motorTimeoutMs),
       motionStartTime_(nil_time),
       ledBlinkStartTime_(nil_time),
       ledBlinkOn_(false)
@@ -88,10 +92,14 @@ const char *DoorStateMachine::stateName() const
         return "MOVING_TO_TOP";
     case State::MOVING_TO_BOTTOM:
         return "MOVING_TO_BOTTOM";
-    case State::MOVING_TO_MIDDLE_FROM_TOP:
-        return "MOVING_TO_MIDDLE_FROM_TOP";
-    case State::MOVING_TO_MIDDLE_FROM_BOTTOM:
-        return "MOVING_TO_MIDDLE_FROM_BOTTOM";
+    case State::TOP_TO_MID:
+        return "TOP_TO_MID";
+    case State::BOT_TO_MID:
+        return "BOT_TO_MID";
+    case State::MID_TO_TOP:
+        return "MID_TO_TOP";
+    case State::MID_TO_BOT:
+        return "MID_TO_BOT";
     case State::RECOVERING_OPEN_AFTER_CLOSE_TIMEOUT:
         return "RECOVERING_OPEN_AFTER_CLOSE_TIMEOUT";
     case State::ERROR:
@@ -113,28 +121,23 @@ void DoorStateMachine::determineInitialState_()
     {
         motor_.stop();
         state_ = State::ERROR;
-        lastFullState_ = LastFullState::NONE;
         printf("ERROR: invalid endstop combination\n");
     }
     else if (top)
     {
         state_ = State::TOP;
-        lastFullState_ = LastFullState::TOP;
     }
     else if (bottom)
     {
         state_ = State::BOTTOM;
-        lastFullState_ = LastFullState::BOTTOM;
     }
     else if (middle)
     {
         state_ = State::MIDDLE;
-        lastFullState_ = LastFullState::NONE;
     }
     else
     {
         state_ = State::UNKNOWN;
-        lastFullState_ = LastFullState::NONE;
     }
 }
 
@@ -142,6 +145,8 @@ void DoorStateMachine::startMoveToTop_()
 {
     motor_.open();
     motionStartTime_ = get_absolute_time();
+    currentMotionTimeoutMs_ = motorTimeoutMs_;
+    nextTargetAfterMiddle_ = NextTarget::NONE;
     state_ = State::MOVING_TO_TOP;
     printf("Moving to TOP\n");
 }
@@ -150,24 +155,52 @@ void DoorStateMachine::startMoveToBottom_()
 {
     motor_.close();
     motionStartTime_ = get_absolute_time();
+    currentMotionTimeoutMs_ = (state_ == State::MIDDLE)
+        ? motorTimeoutMidToBottomMs_
+        : motorTimeoutTopToBottomMs_;
+    nextTargetAfterMiddle_ = NextTarget::NONE;
     state_ = State::MOVING_TO_BOTTOM;
     printf("Moving to BOTTOM\n");
 }
 
-void DoorStateMachine::startMoveToMiddleFromTop_()
+void DoorStateMachine::startTopToMid_(NextTarget nextTarget)
 {
     motor_.close();
     motionStartTime_ = get_absolute_time();
-    state_ = State::MOVING_TO_MIDDLE_FROM_TOP;
-    printf("Moving to MIDDLE from TOP\n");
+    currentMotionTimeoutMs_ = motorTimeoutMs_;
+    nextTargetAfterMiddle_ = nextTarget;
+    state_ = State::TOP_TO_MID;
+    printf("Moving from TOP to MIDDLE\n");
 }
 
-void DoorStateMachine::startMoveToMiddleFromBottom_()
+void DoorStateMachine::startBotToMid_(NextTarget nextTarget)
 {
     motor_.open();
     motionStartTime_ = get_absolute_time();
-    state_ = State::MOVING_TO_MIDDLE_FROM_BOTTOM;
-    printf("Moving to MIDDLE from BOTTOM\n");
+    currentMotionTimeoutMs_ = motorTimeoutMs_;
+    nextTargetAfterMiddle_ = nextTarget;
+    state_ = State::BOT_TO_MID;
+    printf("Moving from BOTTOM to MIDDLE\n");
+}
+
+void DoorStateMachine::startMidToTop_()
+{
+    motor_.open();
+    motionStartTime_ = get_absolute_time();
+    currentMotionTimeoutMs_ = motorTimeoutMs_;
+    nextTargetAfterMiddle_ = NextTarget::NONE;
+    state_ = State::MID_TO_TOP;
+    printf("Moving from MIDDLE to TOP\n");
+}
+
+void DoorStateMachine::startMidToBot_()
+{
+    motor_.close();
+    motionStartTime_ = get_absolute_time();
+    currentMotionTimeoutMs_ = motorTimeoutMidToBottomMs_;
+    nextTargetAfterMiddle_ = NextTarget::NONE;
+    state_ = State::MID_TO_BOT;
+    printf("Moving from MIDDLE to BOTTOM\n");
 }
 
 void DoorStateMachine::enterError_(const char *message)
@@ -182,7 +215,7 @@ void DoorStateMachine::enterError_(const char *message)
 
 bool DoorStateMachine::motionTimedOut_() const
 {
-    return absolute_time_diff_us(motionStartTime_, get_absolute_time()) >= (int64_t)motorTimeoutMs_ * 1000;
+    return absolute_time_diff_us(motionStartTime_, get_absolute_time()) >= (int64_t)currentMotionTimeoutMs_ * 1000;
 }
 
 bool DoorStateMachine::isMovingState_() const
@@ -191,8 +224,10 @@ bool DoorStateMachine::isMovingState_() const
     {
     case State::MOVING_TO_TOP:
     case State::MOVING_TO_BOTTOM:
-    case State::MOVING_TO_MIDDLE_FROM_TOP:
-    case State::MOVING_TO_MIDDLE_FROM_BOTTOM:
+    case State::TOP_TO_MID:
+    case State::BOT_TO_MID:
+    case State::MID_TO_TOP:
+    case State::MID_TO_BOT:
     case State::RECOVERING_OPEN_AFTER_CLOSE_TIMEOUT:
         return true;
     default:
@@ -251,27 +286,23 @@ void DoorStateMachine::update()
         switch (state_)
         {
         case State::TOP:
-            startMoveToMiddleFromTop_();
+            startTopToMid_(NextTarget::NONE);
             break;
 
         case State::BOTTOM:
-            startMoveToMiddleFromBottom_();
+            startBotToMid_(NextTarget::NONE);
             break;
 
-        case State::MOVING_TO_BOTTOM:
-            motor_.stop();
-            startMoveToMiddleFromTop_();
-            break;
-
-        case State::MOVING_TO_TOP:
-            motor_.stop();
-            startMoveToMiddleFromBottom_();
+        case State::TOP_TO_MID:
+        case State::BOT_TO_MID:
+            nextTargetAfterMiddle_ = NextTarget::NONE;
             break;
 
         case State::ERROR:
             printf("Clearing ERROR state\n");
             motor_.stop();
             determineInitialState_();
+            forceGoTopUntilTop_ = true;
             printf("State after clear: %s\n", stateName());
             lastErrorPrintTime = get_absolute_time();
             break;
@@ -300,26 +331,15 @@ void DoorStateMachine::update()
             switch (state_)
             {
             case State::TOP:
-                startMoveToBottom_();
+                startTopToMid_(NextTarget::BOTTOM);
                 break;
 
             case State::BOTTOM:
-                startMoveToTop_();
+                startBotToMid_(NextTarget::TOP);
                 break;
 
             case State::MIDDLE:
-                if (lastFullState_ == LastFullState::TOP)
-                {
-                    startMoveToBottom_();
-                }
-                else if (lastFullState_ == LastFullState::BOTTOM)
-                {
-                    startMoveToTop_();
-                }
-                else
-                {
-                    printf("MIDDLE state but no last full state known\n");
-                }
+                startMidToBot_();
                 break;
 
             case State::UNKNOWN:
@@ -340,7 +360,6 @@ void DoorStateMachine::update()
         {
             motor_.stop();
             state_ = State::TOP;
-            lastFullState_ = LastFullState::TOP;
             forceGoTopUntilTop_ = false;
             printf("Reached TOP\n");
         }
@@ -356,7 +375,6 @@ void DoorStateMachine::update()
         {
             motor_.stop();
             state_ = State::BOTTOM;
-            lastFullState_ = LastFullState::BOTTOM;
             printf("Reached BOTTOM\n");
         }
         else if (motionTimedOut_())
@@ -368,32 +386,75 @@ void DoorStateMachine::update()
         }
         break;
 
-    case State::MOVING_TO_MIDDLE_FROM_TOP:
+    case State::TOP_TO_MID:
         if (middleEndstop_.isActive())
         {
             motor_.stop();
             state_ = State::MIDDLE;
-            lastFullState_ = LastFullState::TOP;
             printf("Reached MIDDLE from TOP\n");
+            if (nextTargetAfterMiddle_ == NextTarget::BOTTOM)
+            {
+                startMidToBot_();
+            }
+            else
+            {
+                nextTargetAfterMiddle_ = NextTarget::NONE;
+            }
         }
         else if (motionTimedOut_())
         {
-            enterError_("Timeout moving to MIDDLE from TOP");
+            enterError_("Timeout moving from TOP to MIDDLE");
             lastErrorPrintTime = get_absolute_time();
         }
         break;
 
-    case State::MOVING_TO_MIDDLE_FROM_BOTTOM:
+    case State::BOT_TO_MID:
         if (middleEndstop_.isActive())
         {
             motor_.stop();
             state_ = State::MIDDLE;
-            lastFullState_ = LastFullState::BOTTOM;
             printf("Reached MIDDLE from BOTTOM\n");
+            if (nextTargetAfterMiddle_ == NextTarget::TOP)
+            {
+                startMidToTop_();
+            }
+            else
+            {
+                nextTargetAfterMiddle_ = NextTarget::NONE;
+            }
         }
         else if (motionTimedOut_())
         {
-            enterError_("Timeout moving to MIDDLE from BOTTOM");
+            enterError_("Timeout moving from BOTTOM to MIDDLE");
+            lastErrorPrintTime = get_absolute_time();
+        }
+        break;
+
+    case State::MID_TO_TOP:
+        if (topEndstop_.isActive())
+        {
+            motor_.stop();
+            state_ = State::TOP;
+            forceGoTopUntilTop_ = false;
+            printf("Reached TOP from MIDDLE\n");
+        }
+        else if (motionTimedOut_())
+        {
+            enterError_("Timeout moving from MIDDLE to TOP");
+            lastErrorPrintTime = get_absolute_time();
+        }
+        break;
+
+    case State::MID_TO_BOT:
+        if (bottomEndstop_.isActive())
+        {
+            motor_.stop();
+            state_ = State::BOTTOM;
+            printf("Reached BOTTOM from MIDDLE\n");
+        }
+        else if (motionTimedOut_())
+        {
+            enterError_("Timeout moving from MIDDLE to BOTTOM");
             lastErrorPrintTime = get_absolute_time();
         }
         break;
@@ -403,7 +464,6 @@ void DoorStateMachine::update()
         {
             motor_.stop();
             state_ = State::ERROR;
-            lastFullState_ = LastFullState::TOP;
             printf("Recovery complete, now in ERROR\n");
             lastErrorPrintTime = get_absolute_time();
         }

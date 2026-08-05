@@ -14,15 +14,17 @@ public:
         TOP,
         BOTTOM,
         MIDDLE,
+        TOP_TO_MID,
+        BOT_TO_MID,
+        MID_TO_TOP,
+        MID_TO_BOT,
         MOVING_TO_TOP,
         MOVING_TO_BOTTOM,
-        MOVING_TO_MIDDLE_FROM_TOP,
-        MOVING_TO_MIDDLE_FROM_BOTTOM,
         RECOVERING_OPEN_AFTER_CLOSE_TIMEOUT,
         ERROR
     };
 
-    enum class LastFullState
+    enum class NextTarget
     {
         NONE,
         TOP,
@@ -43,7 +45,9 @@ public:
                      Endstop &topEndstop,
                      Endstop &middleEndstop,
                      Endstop &bottomEndstop,
-                     uint32_t motorTimeoutMs = 10000);
+                     uint32_t motorTimeoutMs = 6500,
+                     uint32_t motorTimeoutTopToBottomMs = 6500,
+                     uint32_t motorTimeoutMidToBottomMs = 1500);
 
     void init();
     void update();
@@ -61,18 +65,23 @@ private:
     Endstop &bottomEndstop_;
 
     State state_;
-    LastFullState lastFullState_;
     uint32_t motorTimeoutMs_;
+    uint32_t motorTimeoutTopToBottomMs_;
+    uint32_t motorTimeoutMidToBottomMs_;
+    uint32_t currentMotionTimeoutMs_;
     absolute_time_t motionStartTime_;
     absolute_time_t ledBlinkStartTime_;
     bool ledBlinkOn_;
     bool forceGoTopUntilTop_ = false;
+    NextTarget nextTargetAfterMiddle_ = NextTarget::NONE;
 
     void determineInitialState_();
     void startMoveToTop_();
     void startMoveToBottom_();
-    void startMoveToMiddleFromTop_();
-    void startMoveToMiddleFromBottom_();
+    void startTopToMid_(NextTarget nextTarget = NextTarget::NONE);
+    void startBotToMid_(NextTarget nextTarget = NextTarget::NONE);
+    void startMidToTop_();
+    void startMidToBot_();
     void enterError_(const char *message);
     bool motionTimedOut_() const;
     bool isMovingState_() const;

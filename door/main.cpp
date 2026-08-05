@@ -83,6 +83,6 @@ int main()
     while (true) {
         door.update();
         // doorMotor.open();
-        sleep_ms(5);
+        sleep_ms(1);
     }
 }

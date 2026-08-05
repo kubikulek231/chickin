@@ -68,6 +68,7 @@ target_include_directories(chickin-door PRIVATE
 target_link_libraries(chickin-door
     pico_stdlib
     hardware_pio
+    hardware_pwm
     hardware_timer
     hardware_clocks
     hardware_uart

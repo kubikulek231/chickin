@@ -1,4 +1,5 @@
 #include "motor.h"
+#include "hardware/pwm.h"
 
 Motor::Motor(uint direction1Pin, uint direction2Pin, bool invertDirection)
     : directionOnePin(direction1Pin),

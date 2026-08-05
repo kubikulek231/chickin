@@ -73,7 +73,7 @@ int main()
     Endstop bottomEndstop(ENDSTOP_BOTTOM_GPIO, true);
     bottomEndstop.init();
 
-    DoorStateMachine door(openButton, doorMotor, topEndstop, middleEndstop, bottomEndstop, 30000);
+    DoorStateMachine door(openButton, doorMotor, topEndstop, middleEndstop, bottomEndstop, 6500);
     door.init();
 
     StatusLed::init(WS2812_PIO, WS2812_SM, WS2812_PIN, WS2812_IS_RGBW);

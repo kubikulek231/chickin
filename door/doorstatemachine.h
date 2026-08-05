@@ -43,7 +43,7 @@ public:
                      Endstop &topEndstop,
                      Endstop &middleEndstop,
                      Endstop &bottomEndstop,
-                     uint32_t motorTimeoutMs = 30000);
+                     uint32_t motorTimeoutMs = 10000);
 
     void init();
     void update();

@@ -290,3 +290,32 @@ void DoorStateMachine::update()
 
     updateLed();
 }
+
+bool DoorStateMachine::requestOpen()
+{
+    switch (currentState)
+    {
+    case State::Top:
+        return true;
+    case State::Bottom:
+    case State::Unknown:
+        startMoveToTop();
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool DoorStateMachine::requestClose()
+{
+    switch (currentState)
+    {
+    case State::Bottom:
+        return true;
+    case State::Top:
+        startMoveToBottom();
+        return true;
+    default:
+        return false;
+    }
+}

@@ -30,6 +30,8 @@ public:
 
     void init();
     void update();
+    bool requestOpen();
+    bool requestClose();
 
     State state() const;
     const char *stateName() const;

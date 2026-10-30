@@ -4,14 +4,14 @@
 
 class Motor {
 public:
-    static constexpr uint16_t DEFAULT_DUTY = 65535;
-    static constexpr uint16_t PWM_WRAP = 65535; // 16 bit resolution, max duty cycle is 65535
+    static constexpr uint16_t PWM_WRAP = 6249; // About 20 kHz at a 125 MHz system clock
+    static constexpr uint16_t DEFAULT_DUTY = PWM_WRAP + 1; // 100% duty cycle
 
-    Motor(uint dir1_pin, uint dir2_pin, bool invert_direction = false);
+    Motor(uint direction1Pin, uint direction2Pin, bool invertDirection = false);
 
     void init();
-    void open();
-    void close();
+    void forward();
+    void reverse();
     void stop();
 
 private:
@@ -21,8 +21,8 @@ private:
 
     void driveForward();
     void driveReverse();
-    uint dir1_pwm_slice_;
-    uint dir1_pwm_chan_;
-    uint dir2_pwm_slice_;
-    uint dir2_pwm_chan_;
+    uint directionOnePwmSlice;
+    uint directionOnePwmChannel;
+    uint directionTwoPwmSlice;
+    uint directionTwoPwmChannel;
 };

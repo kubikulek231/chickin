@@ -2,32 +2,46 @@
 #include "hardware/pwm.h"
 
 Motor::Motor(uint direction1Pin, uint direction2Pin, bool invertDirection)
-    : directionOnePin(direction1Pin),
-      directionTwoPin(direction2Pin),
-      directionInverted(invertDirection) {
+        : directionOnePin(direction1Pin),
+            directionTwoPin(direction2Pin),
+            directionInverted(invertDirection),
+            directionOnePwmSlice(pwm_gpio_to_slice_num(direction1Pin)),
+            directionOnePwmChannel(pwm_gpio_to_channel(direction1Pin)),
+            directionTwoPwmSlice(pwm_gpio_to_slice_num(direction2Pin)),
+            directionTwoPwmChannel(pwm_gpio_to_channel(direction2Pin)) {
 }
 
 void Motor::init() {
-    gpio_init(directionOnePin);
-    gpio_set_dir(directionOnePin, GPIO_OUT);
-    gpio_put(directionOnePin, 0);
+    gpio_set_function(directionOnePin, GPIO_FUNC_PWM);
+    gpio_set_function(directionTwoPin, GPIO_FUNC_PWM);
 
-    gpio_init(directionTwoPin);
-    gpio_set_dir(directionTwoPin, GPIO_OUT);
-    gpio_put(directionTwoPin, 0);
+    pwm_config config = pwm_get_default_config();
+    pwm_config_set_wrap(&config, PWM_WRAP);
+    pwm_init(directionOnePwmSlice, &config, false);
+
+    if (directionTwoPwmSlice != directionOnePwmSlice) {
+        pwm_init(directionTwoPwmSlice, &config, false);
+    }
+
+    pwm_set_chan_level(directionOnePwmSlice, directionOnePwmChannel, 0);
+    pwm_set_chan_level(directionTwoPwmSlice, directionTwoPwmChannel, 0);
+    pwm_set_enabled(directionOnePwmSlice, true);
+    if (directionTwoPwmSlice != directionOnePwmSlice) {
+        pwm_set_enabled(directionTwoPwmSlice, true);
+    }
 }
 
 void Motor::driveForward() {
-    gpio_put(directionOnePin, 1);
-    gpio_put(directionTwoPin, 0);
+    pwm_set_chan_level(directionOnePwmSlice, directionOnePwmChannel, DEFAULT_DUTY);
+    pwm_set_chan_level(directionTwoPwmSlice, directionTwoPwmChannel, 0);
 }
 
 void Motor::driveReverse() {
-    gpio_put(directionOnePin, 0);
-    gpio_put(directionTwoPin, 1);
+    pwm_set_chan_level(directionOnePwmSlice, directionOnePwmChannel, 0);
+    pwm_set_chan_level(directionTwoPwmSlice, directionTwoPwmChannel, DEFAULT_DUTY);
 }
 
-void Motor::open() {
+void Motor::forward() {
     if (directionInverted) {
         driveReverse();
     } else {
@@ -35,7 +49,7 @@ void Motor::open() {
     }
 }
 
-void Motor::close() {
+void Motor::reverse() {
     if (directionInverted) {
         driveForward();
     } else {
@@ -44,6 +58,6 @@ void Motor::close() {
 }
 
 void Motor::stop() {
-    gpio_put(directionOnePin, 0);
-    gpio_put(directionTwoPin, 0);
+    pwm_set_chan_level(directionOnePwmSlice, directionOnePwmChannel, 0);
+    pwm_set_chan_level(directionTwoPwmSlice, directionTwoPwmChannel, 0);
 }

@@ -107,7 +107,7 @@ void DoorStateMachine::determineInitialState()
 
 void DoorStateMachine::startMoveToTop()
 {
-    motorRef.open();
+    motorRef.forward();
     motionStartTime = get_absolute_time();
     currentState = State::MovingToTop;
     printf("Moving to TOP\n");
@@ -115,7 +115,7 @@ void DoorStateMachine::startMoveToTop()
 
 void DoorStateMachine::startMoveToBottom()
 {
-    motorRef.close();
+    motorRef.reverse();
     motionStartTime = get_absolute_time();
     currentState = State::MovingToBottom;
     printf("Moving to BOTTOM\n");
@@ -123,7 +123,7 @@ void DoorStateMachine::startMoveToBottom()
 
 void DoorStateMachine::startMoveToMiddleFromTop()
 {
-    motorRef.close();
+    motorRef.reverse();
     motionStartTime = get_absolute_time();
     currentState = State::MovingToMiddleFromTop;
     printf("Moving to MIDDLE from TOP\n");
@@ -131,7 +131,7 @@ void DoorStateMachine::startMoveToMiddleFromTop()
 
 void DoorStateMachine::startMoveToMiddleFromBottom()
 {
-    motorRef.open();
+    motorRef.forward();
     motionStartTime = get_absolute_time();
     currentState = State::MovingToMiddleFromBottom;
     printf("Moving to MIDDLE from BOTTOM\n");
@@ -323,7 +323,7 @@ void DoorStateMachine::update()
         else if (motionTimedOut(closeTimeoutDurationMs))
         {
             printf("ERROR: Closing timeout, reopening\n");
-            motorRef.open();
+            motorRef.forward();
             motionStartTime = get_absolute_time();
             currentState = State::RecoveringOpenAfterCloseTimeout;
         }

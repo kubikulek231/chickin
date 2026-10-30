@@ -4,7 +4,7 @@
 
 class Button {
 public:
-    Button(uint pin, bool active_low = true, uint32_t debounce_ms = 30, uint32_t hold_ms = 3000);
+    Button(uint pinNumber, bool activeLow = true, uint32_t debounceMs = 30, uint32_t holdMs = 3000);
 
     void init();
     void update();
@@ -15,20 +15,20 @@ public:
     bool isDown() const;
 
 private:
-    uint pin_;
-    bool active_low_;
-    uint32_t debounce_ms_;
-    uint32_t hold_ms_;
+    uint gpioPin;
+    bool activeLowInput;
+    uint32_t debounceIntervalMs;
+    uint32_t holdDurationMs;
 
-    bool raw_state_;
-    bool stable_state_;
-    absolute_time_t last_change_time_;
-    absolute_time_t pressed_time_;
+    bool rawState;
+    bool stableState;
+    absolute_time_t lastChangeTime;
+    absolute_time_t pressedTime;
 
-    bool press_event_;
-    bool release_event_;
-    bool hold_event_;
-    bool hold_reported_;
+    bool pressEvent;
+    bool releaseEvent;
+    bool holdEvent;
+    bool holdReported;
 
     bool readRaw() const;
 };

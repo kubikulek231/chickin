@@ -1,35 +1,35 @@
 #include "statusled.h"
 #include <lib/w2812.pio.h>
 
-PIO StatusLed::pio_ = pio0;
-uint StatusLed::sm_ = 0;
-
-void StatusLed::init(PIO pio, uint sm, uint pin, bool is_rgbw)
+void StatusLed::init(PIO pio, uint sm, uint pin, bool isRgbw)
 {
-    pio_ = pio;
-    sm_ = sm;
+    pioInstance = pio;
+    stateMachine = sm;
 
-    uint offset = pio_add_program(pio_, &ws2812_program);
-    ws2812_program_init(pio_, sm_, offset, pin, 800000, is_rgbw);
-    set(Color::OFF);
+    uint offset = pio_add_program(pioInstance, &ws2812_program);
+    ws2812_program_init(pioInstance, stateMachine, offset, pin, 800000, isRgbw);
+    set(Color::Off);
 }
 
 void StatusLed::set(Color color)
 {
     switch (color)
     {
-    case Color::GREEN:
-        put_pixel(pio_, sm_, urgb_u32(0, 20, 0));
+    case Color::Green:
+        putPixel(pioInstance, stateMachine, urgbToUint32(0, 20, 0));
         break;
-    case Color::RED:
-        put_pixel(pio_, sm_, urgb_u32(20, 0, 0));
+    case Color::Red:
+        putPixel(pioInstance, stateMachine, urgbToUint32(20, 0, 0));
         break;
-    case Color::BLUE:
-        put_pixel(pio_, sm_, urgb_u32(0, 0, 20));
+    case Color::Blue:
+        putPixel(pioInstance, stateMachine, urgbToUint32(0, 0, 20));
         break;
-    case Color::OFF:
+    case Color::Pink:
+        putPixel(pioInstance, stateMachine, urgbToUint32(20, 0, 20));
+        break;
+    case Color::Off:
     default:
-        put_pixel(pio_, sm_, urgb_u32(0, 0, 0));
+        putPixel(pioInstance, stateMachine, urgbToUint32(0, 0, 0));
         break;
     }
 }

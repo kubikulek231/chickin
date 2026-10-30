@@ -41,9 +41,9 @@ int main()
 {
     stdio_init_all();
 
-    absolute_time_t usb_wait_start = get_absolute_time();
+        absolute_time_t usbWaitStart = get_absolute_time();
     while (!stdio_usb_connected() &&
-           absolute_time_diff_us(usb_wait_start, get_absolute_time()) < 5000000) {
+            absolute_time_diff_us(usbWaitStart, get_absolute_time()) < 5000000) {
         sleep_ms(50);
     }
 
@@ -58,25 +58,26 @@ int main()
     // gpio_set_function(UART0_TX_GPIO, GPIO_FUNC_UART);
     // gpio_set_function(UART0_RX_GPIO, GPIO_FUNC_UART);
 
-    // Button openButton(DOOR_BUTTON_GPIO);
-    // openButton.init();
+    Button openButton(DOOR_BUTTON_GPIO);
+    openButton.init();
 
     Motor doorMotor(MOTOR_DIR1_GPIO, MOTOR_DIR2_GPIO);
     doorMotor.init();
 
-    // Endstop topEndstop(ENDSTOP_TOP_GPIO, true);
-    // topEndstop.init();
+    Endstop topEndstop(ENDSTOP_TOP_GPIO, true);
+    topEndstop.init();
 
-    // Endstop middleEndstop(ENDSTOP_MIDDLE_GPIO, true);
-    // middleEndstop.init();
+    Endstop middleEndstop(ENDSTOP_MIDDLE_GPIO, true);
+    middleEndstop.init();
 
-    // Endstop bottomEndstop(ENDSTOP_BOTTOM_GPIO, true);
-    // bottomEndstop.init();
+    Endstop bottomEndstop(ENDSTOP_BOTTOM_GPIO, true);
+    bottomEndstop.init();
 
-    // DoorStateMachine door(openButton, doorMotor, topEndstop, middleEndstop, bottomEndstop, 30000);
-    // door.init();
+    StatusLed statusLed;
+    statusLed.init(WS2812_PIO, WS2812_SM, WS2812_PIN, WS2812_IS_RGBW);
 
-    StatusLed::init(WS2812_PIO, WS2812_SM, WS2812_PIN, WS2812_IS_RGBW);
+    DoorStateMachine door(openButton, doorMotor, topEndstop, middleEndstop, bottomEndstop, statusLed, 15000, 10000);
+    door.init();
 
     printf("Entering the main loop...\n");
 

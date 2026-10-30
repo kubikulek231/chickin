@@ -4,7 +4,7 @@
 
 class Motor {
 public:
-    Motor(uint dir1_pin, uint dir2_pin, bool invert_direction = false);
+    Motor(uint direction1Pin, uint direction2Pin, bool invertDirection = false);
 
     void init();
     void open();
@@ -12,10 +12,10 @@ public:
     void stop();
 
 private:
-    uint dir1_pin_;
-    uint dir2_pin_;
-    bool invert_direction_;
+    uint directionOnePin;
+    uint directionTwoPin;
+    bool directionInverted;
 
-    void driveForward_();
-    void driveReverse_();
+    void driveForward();
+    void driveReverse();
 };

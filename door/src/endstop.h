@@ -4,13 +4,13 @@
 
 class Endstop {
 public:
-    Endstop(uint pin, bool active_low = true);
+    Endstop(uint pinNumber, bool activeLow = true);
 
     void init();
     bool isActive() const;
     bool isInactive() const;
 
 private:
-    uint pin_;
-    bool active_low_;
+    uint gpioPin;
+    bool activeLowInput;
 };

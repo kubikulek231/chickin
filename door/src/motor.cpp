@@ -1,48 +1,48 @@
 #include "motor.h"
 
-Motor::Motor(uint dir1_pin, uint dir2_pin, bool invert_direction)
-    : dir1_pin_(dir1_pin),
-      dir2_pin_(dir2_pin),
-      invert_direction_(invert_direction) {
+Motor::Motor(uint direction1Pin, uint direction2Pin, bool invertDirection)
+    : directionOnePin(direction1Pin),
+      directionTwoPin(direction2Pin),
+      directionInverted(invertDirection) {
 }
 
 void Motor::init() {
-    gpio_init(dir1_pin_);
-    gpio_set_dir(dir1_pin_, GPIO_OUT);
-    gpio_put(dir1_pin_, 0);
+    gpio_init(directionOnePin);
+    gpio_set_dir(directionOnePin, GPIO_OUT);
+    gpio_put(directionOnePin, 0);
 
-    gpio_init(dir2_pin_);
-    gpio_set_dir(dir2_pin_, GPIO_OUT);
-    gpio_put(dir2_pin_, 0);
+    gpio_init(directionTwoPin);
+    gpio_set_dir(directionTwoPin, GPIO_OUT);
+    gpio_put(directionTwoPin, 0);
 }
 
-void Motor::driveForward_() {
-    gpio_put(dir1_pin_, 1);
-    gpio_put(dir2_pin_, 0);
+void Motor::driveForward() {
+    gpio_put(directionOnePin, 1);
+    gpio_put(directionTwoPin, 0);
 }
 
-void Motor::driveReverse_() {
-    gpio_put(dir1_pin_, 0);
-    gpio_put(dir2_pin_, 1);
+void Motor::driveReverse() {
+    gpio_put(directionOnePin, 0);
+    gpio_put(directionTwoPin, 1);
 }
 
 void Motor::open() {
-    if (invert_direction_) {
-        driveReverse_();
+    if (directionInverted) {
+        driveReverse();
     } else {
-        driveForward_();
+        driveForward();
     }
 }
 
 void Motor::close() {
-    if (invert_direction_) {
-        driveForward_();
+    if (directionInverted) {
+        driveForward();
     } else {
-        driveReverse_();
+        driveReverse();
     }
 }
 
 void Motor::stop() {
-    gpio_put(dir1_pin_, 0);
-    gpio_put(dir2_pin_, 0);
+    gpio_put(directionOnePin, 0);
+    gpio_put(directionTwoPin, 0);
 }

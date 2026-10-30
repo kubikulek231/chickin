@@ -1,23 +1,23 @@
 #include "endstop.h"
 
-Endstop::Endstop(uint pin, bool active_low)
-    : pin_(pin), active_low_(active_low) {
+Endstop::Endstop(uint pinNumber, bool activeLow)
+    : gpioPin(pinNumber), activeLowInput(activeLow) {
 }
 
 void Endstop::init() {
-    gpio_init(pin_);
-    gpio_set_dir(pin_, GPIO_IN);
+    gpio_init(gpioPin);
+    gpio_set_dir(gpioPin, GPIO_IN);
 
-    if (active_low_) {
-        gpio_pull_up(pin_);
+    if (activeLowInput) {
+        gpio_pull_up(gpioPin);
     } else {
-        gpio_pull_down(pin_);
+        gpio_pull_down(gpioPin);
     }
 }
 
 bool Endstop::isActive() const {
-    bool level = gpio_get(pin_);
-    return active_low_ ? level : !level; // End stop is connected to NC
+    bool level = gpio_get(gpioPin);
+    return activeLowInput ? level : !level; // End stop is connected to NC
 }
 
 bool Endstop::isInactive() const {

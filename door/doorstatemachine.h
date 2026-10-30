@@ -4,38 +4,30 @@
 #include <src/button.h>
 #include <src/motor.h>
 #include <src/endstop.h>
+#include <src/statusled.h>
 
 class DoorStateMachine
 {
 public:
     enum class State
     {
-        UNKNOWN,
-        TOP,
-        BOTTOM,
-        MIDDLE,
-        MOVING_TO_TOP,
-        MOVING_TO_BOTTOM,
-        MOVING_TO_MIDDLE_FROM_TOP,
-        MOVING_TO_MIDDLE_FROM_BOTTOM,
-        RECOVERING_OPEN_AFTER_CLOSE_TIMEOUT,
-        ERROR
+        Unknown,
+        Top,
+        Bottom,
+        Middle,
+        MovingToTop,
+        MovingToBottom,
+        MovingToMiddleFromTop,
+        MovingToMiddleFromBottom,
+        RecoveringOpenAfterCloseTimeout,
+        Error
     };
 
     enum class LastFullState
     {
-        NONE,
-        TOP,
-        BOTTOM
-    };
-
-    // Example status colors
-    enum class StatusColor
-    {
-        OFF,
-        GREEN,
-        RED,
-        BLUE
+        None,
+        Top,
+        Bottom
     };
 
     DoorStateMachine(Button &button,
@@ -43,7 +35,9 @@ public:
                      Endstop &topEndstop,
                      Endstop &middleEndstop,
                      Endstop &bottomEndstop,
-                     uint32_t motorTimeoutMs = 30000);
+                     StatusLed &statusLed,
+                     uint32_t openTimeoutMs = 30000,
+                     uint32_t closeTimeoutMs = 30000);
 
     void init();
     void update();
@@ -52,29 +46,31 @@ public:
     const char *stateName() const;
 
 private:
-    bool errorClearHandled_ = false;
+    bool errorClearHandled = false;
 
-    Button &button_;
-    Motor &motor_;
-    Endstop &topEndstop_;
-    Endstop &middleEndstop_;
-    Endstop &bottomEndstop_;
+    Button &buttonRef;
+    Motor &motorRef;
+    Endstop &topEndstopRef;
+    Endstop &middleEndstopRef;
+    Endstop &bottomEndstopRef;
+    StatusLed &statusLedRef;
 
-    State state_;
-    LastFullState lastFullState_;
-    uint32_t motorTimeoutMs_;
-    absolute_time_t motionStartTime_;
-    absolute_time_t ledBlinkStartTime_;
-    bool ledBlinkOn_;
+    State currentState;
+    LastFullState lastFullState;
+    uint32_t openTimeoutDurationMs;
+    uint32_t closeTimeoutDurationMs;
+    absolute_time_t motionStartTime;
+    absolute_time_t ledBlinkStartTime;
+    bool ledBlinkOn;
 
-    void determineInitialState_();
-    void startMoveToTop_();
-    void startMoveToBottom_();
-    void startMoveToMiddleFromTop_();
-    void startMoveToMiddleFromBottom_();
-    void enterError_(const char *message);
-    bool motionTimedOut_() const;
-    bool isMovingState_() const;
-    StatusColor currentLedColor_() const;
-    void updateLed_();
+    void determineInitialState();
+    void startMoveToTop();
+    void startMoveToBottom();
+    void startMoveToMiddleFromTop();
+    void startMoveToMiddleFromBottom();
+    void enterError(const char *message);
+    bool motionTimedOut(uint32_t timeoutMs) const;
+    bool isMovingState() const;
+    StatusLed::Color currentLedColor() const;
+    void updateLed();
 };

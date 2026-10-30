@@ -26,10 +26,10 @@
 #define MOTOR_DIR2_GPIO        8
 
 // UART defines
-#define UART_ID uart1
+#define UART_ID uart0
 #define BAUD_RATE 115200
-#define UART1_TX_GPIO          4
-#define UART1_RX_GPIO          5
+#define UART0_TX_GPIO          0
+#define UART0_RX_GPIO          1
 #define UART_COMMAND_BUFFER_SIZE 32
 
 constexpr char UART_COMMAND_GET_STATUS[] = "GET_STATUS";
@@ -112,6 +112,7 @@ static void updateUart(DoorStateMachine &door, char *command, size_t &commandLen
             else if (commandLength > 0)
             {
                 command[commandLength] = '\0';
+                printf("UART command received: %s\n", command);
                 processUartCommand(command, door);
             }
 
@@ -150,8 +151,8 @@ int main()
     }
 
     uart_init(UART_ID, BAUD_RATE);
-    gpio_set_function(UART1_TX_GPIO, GPIO_FUNC_UART);
-    gpio_set_function(UART1_RX_GPIO, GPIO_FUNC_UART);
+    gpio_set_function(UART0_TX_GPIO, GPIO_FUNC_UART);
+    gpio_set_function(UART0_RX_GPIO, GPIO_FUNC_UART);
 
     Button openButton(DOOR_BUTTON_GPIO);
     openButton.init();

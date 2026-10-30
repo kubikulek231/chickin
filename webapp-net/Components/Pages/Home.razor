@@ -1,0 +1,97 @@
+@page "/"
+@inject IUartService Uart
+@inject ILogger<Home> Logger
+
+<PageTitle>Chicken door</PageTitle>
+
+<main class="container py-5">
+    <h1 class="mb-4">Chicken door</h1>
+
+    <section class="card" aria-labelledby="status-heading">
+        <div class="card-body">
+            <h2 id="status-heading" class="h5 card-title">Current state</h2>
+
+            @if (_doorState is not null)
+            {
+                <p class="fs-4 mb-3" role="status">@_doorState</p>
+            }
+            else if (_errorMessage is null)
+            {
+                <p class="text-body-secondary" role="status">Loading state...</p>
+            }
+            else
+            {
+                <p class="text-body-secondary">State is not available.</p>
+            }
+
+            @if (_errorMessage is not null)
+            {
+                <div class="alert alert-danger" role="alert">@_errorMessage</div>
+            }
+
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-success" @onclick="OpenAsync" disabled="@_busy">Open</button>
+                <button class="btn btn-warning" @onclick="CloseAsync" disabled="@_busy">Close</button>
+                <button class="btn btn-primary" @onclick="GetStatusAsync" disabled="@_busy">Get state</button>
+            </div>
+        </div>
+    </section>
+</main>
+
+@code {
+    private string? _doorState;
+    private string? _errorMessage;
+    private bool _busy = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetStatusAsync();
+    }
+
+    private async Task GetStatusAsync()
+    {
+        await RunCommandAsync(async () => _doorState = await Uart.GetStatusAsync());
+    }
+
+    private async Task OpenAsync()
+    {
+        await RunCommandAsync(async () =>
+        {
+            await Uart.OpenAsync();
+            _doorState = await Uart.GetStatusAsync();
+        });
+    }
+
+    private async Task CloseAsync()
+    {
+        await RunCommandAsync(async () =>
+        {
+            await Uart.CloseAsync();
+            _doorState = await Uart.GetStatusAsync();
+        });
+    }
+
+    private async Task RunCommandAsync(Func<Task> command)
+    {
+        _busy = true;
+        _errorMessage = null;
+
+        try
+        {
+            await command();
+        }
+        catch (Exception exception) when (exception is IOException
+            or UnauthorizedAccessException
+            or InvalidOperationException
+            or TimeoutException
+            or ArgumentException)
+        {
+            Logger.LogError(exception, "UART command failed.");
+            _errorMessage = "Command execution failed.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

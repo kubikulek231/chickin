@@ -1,0 +1,6 @@
+bin/
+/bin/publish/orangepi-arm64/
+obj/
+publish/
+.vs/
+*.csproj.user

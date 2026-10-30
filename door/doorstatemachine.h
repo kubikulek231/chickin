@@ -14,26 +14,15 @@ public:
         Unknown,
         Top,
         Bottom,
-        Middle,
         MovingToTop,
         MovingToBottom,
-        MovingToMiddleFromTop,
-        MovingToMiddleFromBottom,
         RecoveringOpenAfterCloseTimeout,
         Error
-    };
-
-    enum class LastFullState
-    {
-        None,
-        Top,
-        Bottom
     };
 
     DoorStateMachine(Button &button,
                      Motor &motor,
                      Endstop &topEndstop,
-                     Endstop &middleEndstop,
                      Endstop &bottomEndstop,
                      StatusLed &statusLed,
                      uint32_t openTimeoutMs = 30000,
@@ -51,12 +40,10 @@ private:
     Button &buttonRef;
     Motor &motorRef;
     Endstop &topEndstopRef;
-    Endstop &middleEndstopRef;
     Endstop &bottomEndstopRef;
     StatusLed &statusLedRef;
 
     State currentState;
-    LastFullState lastFullState;
     uint32_t openTimeoutDurationMs;
     uint32_t closeTimeoutDurationMs;
     absolute_time_t motionStartTime;
@@ -66,8 +53,6 @@ private:
     void determineInitialState();
     void startMoveToTop();
     void startMoveToBottom();
-    void startMoveToMiddleFromTop();
-    void startMoveToMiddleFromBottom();
     void enterError(const char *message);
     bool motionTimedOut(uint32_t timeoutMs) const;
     bool isMovingState() const;

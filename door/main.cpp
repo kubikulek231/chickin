@@ -15,7 +15,6 @@
 
 // === Endstops ===
 #define ENDSTOP_TOP_GPIO       14
-#define ENDSTOP_MIDDLE_GPIO    15
 #define ENDSTOP_BOTTOM_GPIO    26
 
 // === Button ===
@@ -67,16 +66,13 @@ int main()
     Endstop topEndstop(ENDSTOP_TOP_GPIO, true);
     topEndstop.init();
 
-    Endstop middleEndstop(ENDSTOP_MIDDLE_GPIO, true);
-    middleEndstop.init();
-
     Endstop bottomEndstop(ENDSTOP_BOTTOM_GPIO, true);
     bottomEndstop.init();
 
     StatusLed statusLed;
     statusLed.init(WS2812_PIO, WS2812_SM, WS2812_PIN, WS2812_IS_RGBW);
 
-    DoorStateMachine door(openButton, doorMotor, topEndstop, middleEndstop, bottomEndstop, statusLed, 15000, 10000);
+    DoorStateMachine door(openButton, doorMotor, topEndstop, bottomEndstop, statusLed, 15000, 10000);
     door.init();
 
     printf("Entering the main loop...\n");

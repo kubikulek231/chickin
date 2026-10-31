@@ -1,11 +1,68 @@
 @page "/"
+@using System.Globalization
+@using System.Text.Json
+@implements IAsyncDisposable
 @inject IUartService Uart
+@inject DailyDoorScheduleService DoorSchedule
 @inject ILogger<Home> Logger
 
 <PageTitle>Chicken door</PageTitle>
 
 <main class="container py-5">
     <h1 class="mb-4">Chicken door</h1>
+
+    <section class="card mb-4" aria-labelledby="clock-heading">
+        <div class="card-body">
+            <h2 id="clock-heading" class="h5 card-title">System time</h2>
+            <p class="fs-4 mb-0" role="timer">@_currentTime</p>
+            <p class="text-body-secondary mb-0">Server local time</p>
+        </div>
+    </section>
+
+    <section class="card mb-4" aria-labelledby="schedule-heading">
+        <div class="card-body">
+            <h2 id="schedule-heading" class="h5 card-title">Daily schedule</h2>
+            <p>Set the local time to open and close the door each day.</p>
+            @if (_scheduleMessage is null && _scheduleError is null)
+            {
+                <p class="text-body-secondary">No daily schedule saved yet.</p>
+            }
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label class="form-label" for="open-hour">Open hour</label>
+                    <input id="open-hour" class="form-control" type="number" min="0" max="23" step="1"
+                           value="@_openHour" @oninput="eventArgs => _openHour = eventArgs.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label" for="open-minute">Open minute</label>
+                    <input id="open-minute" class="form-control" type="number" min="0" max="59" step="1"
+                           value="@_openMinute" @oninput="eventArgs => _openMinute = eventArgs.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label" for="close-hour">Close hour</label>
+                    <input id="close-hour" class="form-control" type="number" min="0" max="23" step="1"
+                           value="@_closeHour" @oninput="eventArgs => _closeHour = eventArgs.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label" for="close-minute">Close minute</label>
+                    <input id="close-minute" class="form-control" type="number" min="0" max="59" step="1"
+                           value="@_closeMinute" @oninput="eventArgs => _closeMinute = eventArgs.Value?.ToString() ?? string.Empty" />
+                </div>
+            </div>
+
+            <button class="btn btn-primary" @onclick="SaveScheduleAsync" disabled="@_saving">Save schedule</button>
+
+            @if (_scheduleError is not null)
+            {
+                <div class="alert alert-danger mt-3 mb-0" role="alert">@_scheduleError</div>
+            }
+            else if (_scheduleMessage is not null)
+            {
+                <div class="alert alert-success mt-3 mb-0" role="status">@_scheduleMessage</div>
+            }
+        </div>
+    </section>
 
     <section class="card" aria-labelledby="status-heading">
         <div class="card-body">
@@ -41,11 +98,116 @@
 @code {
     private string? _doorState;
     private string? _errorMessage;
+    private string? _scheduleError;
+    private string? _scheduleMessage;
+    private string _currentTime = DateTime.Now.ToString("HH:mm:ss");
+    private string _openHour = string.Empty;
+    private string _openMinute = string.Empty;
+    private string _closeHour = string.Empty;
+    private string _closeMinute = string.Empty;
     private bool _busy = true;
+    private bool _saving;
+    private readonly CancellationTokenSource _clockCancellation = new();
+    private Task? _clockTask;
 
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            var schedule = await DoorSchedule.GetScheduleAsync();
+            if (schedule is not null)
+            {
+                _openHour = schedule.OpenTime.Hour.ToString(CultureInfo.InvariantCulture);
+                _openMinute = schedule.OpenTime.Minute.ToString(CultureInfo.InvariantCulture);
+                _closeHour = schedule.CloseTime.Hour.ToString(CultureInfo.InvariantCulture);
+                _closeMinute = schedule.CloseTime.Minute.ToString(CultureInfo.InvariantCulture);
+                _scheduleMessage = "Daily schedule loaded.";
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
+        {
+            Logger.LogError(exception, "Failed to load saved door schedule.");
+            _scheduleError = "Could not load the saved schedule. Check the saved schedule file.";
+        }
+
+        _clockTask = UpdateClockAsync(_clockCancellation.Token);
         await GetStatusAsync();
+    }
+
+    private async Task UpdateClockAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                _currentTime = DateTime.Now.ToString("HH:mm:ss");
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task SaveScheduleAsync()
+    {
+        var errors = new List<string>();
+        var openHour = ParseTimePart("Open hour", _openHour, 0, 23, errors);
+        var openMinute = ParseTimePart("Open minute", _openMinute, 0, 59, errors);
+        var closeHour = ParseTimePart("Close hour", _closeHour, 0, 23, errors);
+        var closeMinute = ParseTimePart("Close minute", _closeMinute, 0, 59, errors);
+
+        if (errors.Count == 0 && openHour == closeHour && openMinute == closeMinute)
+        {
+            errors.Add("Open and close times must be different.");
+        }
+
+        if (errors.Count > 0)
+        {
+            _scheduleError = string.Join(" ", errors);
+            _scheduleMessage = null;
+            return;
+        }
+
+        _saving = true;
+        _scheduleError = null;
+        _scheduleMessage = null;
+
+        try
+        {
+            await DoorSchedule.SaveScheduleAsync(
+                new TimeOnly(openHour!.Value, openMinute!.Value),
+                new TimeOnly(closeHour!.Value, closeMinute!.Value));
+            _scheduleMessage = "Daily schedule saved.";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            Logger.LogError(exception, "Failed to save door schedule.");
+            _scheduleError = "Could not save the schedule. Check the server's schedule-file permissions.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static int? ParseTimePart(string label, string value, int minimum, int maximum, List<string> errors)
+    {
+        if (!int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed))
+        {
+            errors.Add($"{label} is required and must be a whole number.");
+            return null;
+        }
+
+        if (parsed < minimum || parsed > maximum)
+        {
+            errors.Add($"{label} must be between {minimum} and {maximum}.");
+            return null;
+        }
+
+        return parsed;
     }
 
     private async Task GetStatusAsync()
@@ -93,5 +255,16 @@
         {
             _busy = false;
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _clockCancellation.CancelAsync();
+        if (_clockTask is not null)
+        {
+            await _clockTask;
+        }
+
+        _clockCancellation.Dispose();
     }
 }

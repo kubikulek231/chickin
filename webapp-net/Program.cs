@@ -23,6 +23,10 @@ else
     builder.Services.AddSingleton<IUartService, MockUartService>();
 }
 
+builder.Services.AddSingleton<DailyDoorScheduleService>();
+builder.Services.AddHostedService(serviceProvider =>
+    serviceProvider.GetRequiredService<DailyDoorScheduleService>());
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())

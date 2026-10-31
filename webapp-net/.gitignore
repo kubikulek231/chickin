@@ -4,3 +4,4 @@ obj/
 publish/
 .vs/
 *.csproj.user
+*.pubxml.user
